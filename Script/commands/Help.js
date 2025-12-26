@@ -1,156 +1,154 @@
 const fs = require("fs-extra");
-const request = require("request");
 const path = require("path");
+const https = require("https");
 
-module.exports.config = {
+module.exports = {
+  config: {
     name: "help",
-    version: "2.0.0",
-    hasPermssion: 0,
-    credits: "SHAHADAT SAHU",
-    description: "Shows all commands with details",
-    commandCategory: "system",
-    usages: "[command name/page number]",
-    cooldowns: 5,
-    envConfig: {
-        autoUnsend: true,
-        delayUnsend: 20
+    aliases: ["menu", "commands"],
+    version: "5.0",
+    author: "ARIYAN",
+    shortDescription: "Aʙᴄ 𝙎𝙝𝙤𝙬 𝙖𝙡𝙡 𝙘𝙤𝙢𝙢𝙖𝙣𝙙𝙨",
+    longDescription: "Aʙᴄ 𝘿𝙞𝙨𝙥𝙡𝙖𝙮𝙨 𝙖 𝙛𝙤𝙣𝙩-𝙨𝙩𝙮𝙡𝙚ᴅ 𝙘𝙖𝙩𝙚ɡ𝙤ʀɪᴢᴇᴅ 𝙘𝙤𝙢ᴍᴀɴᴅ 𝙢ᴇɴᴜ.",
+    category: "system",
+    guide: "{pn}help [command name]"
+  },
+
+  onStart: async function ({ message, args, prefix }) {
+    const allCommands = global.GoatBot.commands;
+    const categories = {};
+
+    // Aʙᴄ ফন্ট কনভার্টার
+    const fontMap = {
+      A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J",
+      K: "K", L: "L", M: "M", N: "N", O: "O", P: "P", Q: "Q", R: "R", S: "S",
+      T: "T", U: "U", V: "V", W: "W", X: "X", Y: "Y", Z: "Z",
+      a: "ᴀ", b: "ʙ", c: "ᴄ", d: "ᴅ", e: "ᴇ", f: "ꜰ", g: "ɢ", h: "ʜ", i: "ɪ", j: "ᴊ",
+      k: "ᴋ", l: "ʟ", m: "ᴍ", n: "ɴ", o: "ᴏ", p: "ᴘ", q: "ǫ", r: "ʀ", s: "s",
+      t: "ᴛ", u: "ᴜ", v: "ᴠ", w: "ᴡ", x: "x", y: "ʏ", z: "ᴢ"
+    };
+    const fancy = (str) => str.replace(/[A-Za-z]/g, (c) => fontMap[c] || c);
+
+    const emojiMap = {
+      ai: "🤖", "ai-image": "🎨", group: "👥", system: "⚙️",
+      fun: "😂", owner: "👑", config: "🧠", economy: "💰",
+      media: "🎬", "18+": "🔞", tools: "🛠", utility: "🧰",
+      info: "ℹ️", image: "🖼️", game: "🎮", admin: "🛡️",
+      rank: "📈", boxchat: "💬", others: "📁"
+    };
+
+    const cleanCategoryName = (text) => {
+      if (!text) return "others";
+      return text
+        .normalize("NFKD")
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+    };
+
+    for (const [name, cmd] of allCommands) {
+      const cat = cleanCategoryName(cmd.config.category);
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(cmd.config.name);
     }
-};
 
-module.exports.languages = {
-    "en": {
-        "moduleInfo": `╭━━━━━━━━━━━━━━━━╮
-┃ ✨ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐈𝐍𝐅𝐎 ✨
-┣━━━━━━━━━━━┫
-┃ 🔖 Name: %1
-┃ 📄 Usage: %2
-┃ 📜 Description: %3
-┃ 🔑 Permission: %4
-┃ 👨‍💻 Credit: %5
-┃ 📂 Category: %6
-┃ ⏳ Cooldown: %7s
-┣━━━━━━━━━━━━━━━━┫
-┃ ⚙ Prefix: %8
-┃ 🤖 Bot Name: %9
-┃ 👑 Owner: 𝐒𝐇𝐀𝐇𝐀𝐃𝐀𝐓 𝐒𝐀𝐇𝐔
-╰━━━━━━━━━━━━━━━━╯`,
-        "helpList": "[ There are %1 commands. Use: \"%2help commandName\" to view more. ]",
-        "user": "User",
-        "adminGroup": "Admin Group",
-        "adminBot": "Admin Bot"
+    const gifURLs = [
+      "https://i.imgur.com/3tBIaSF.gif",
+      "https://i.imgur.com/vWl3Tb5.gif",
+      "https://i.imgur.com/DYfouuR.gif"
+    ];
+
+    const randomGifURL = gifURLs[Math.floor(Math.random() * gifURLs.length)];
+    const gifFolder = path.join(__dirname, "cache");
+    if (!fs.existsSync(gifFolder)) fs.mkdirSync(gifFolder, { recursive: true });
+    const gifName = path.basename(randomGifURL);
+    const gifPath = path.join(gifFolder, gifName);
+    if (!fs.existsSync(gifPath)) await downloadGif(randomGifURL, gifPath);
+
+    // একক কমান্ড ডিটেইল
+    if (args[0]) {
+      const query = args[0].toLowerCase();
+      const cmd =
+        allCommands.get(query) ||
+        [...allCommands.values()].find((c) => (c.config.aliases || []).includes(query));
+      if (!cmd) return message.reply(`❌ ${fancy(`Command "${query}" not found.`)}`);
+
+      const {
+        name,
+        version,
+        author,
+        guide,
+        category,
+        shortDescription,
+        longDescription,
+        aliases
+      } = cmd.config;
+
+      const desc =
+        typeof longDescription === "string"
+          ? longDescription
+          : longDescription?.en || shortDescription?.en || shortDescription || "No description";
+
+      const usage =
+        typeof guide === "string"
+          ? guide.replace(/{pn}/g, prefix)
+          : guide?.en?.replace(/{pn}/g, prefix) || `${prefix}${name}`;
+
+      return message.reply({
+        body:
+          `☠️ ${fancy("COMMAND INFO")} ☠️\n\n` +
+          `➥ ${fancy("Name")}: ${fancy(name)}\n` +
+          `➥ ${fancy("Category")}: ${fancy(category || "Uncategorized")}\n` +
+          `➥ ${fancy("Description")}: ${fancy(desc)}\n` +
+          `➥ ${fancy("Aliases")}: ${fancy(aliases?.length ? aliases.join(", ") : "None")}\n` +
+          `➥ ${fancy("Usage")}: ${fancy(usage)}\n` +
+          `➥ ${fancy("Author")}: ${fancy(author || "ARIYAN")}\n` +
+          `➥ ${fancy("Version")}: ${fancy(version || "1.0")}`,
+        attachment: fs.createReadStream(gifPath)
+      });
     }
-};
 
-// 🔹 এখানে আপনার ফটো Imgur লিংক করে বসাবেন ✅
-const helpImages = [
-    "https://i.imgur.com/sxSn1K3.jpeg",
-    "https://i.imgur.com/8WvpgUL.jpeg",
-    "https://i.imgur.com/8WvpgUL.jpeg",
-    "https://i.imgur.com/sxSn1K3.jpeg"
-];
+    // সব কমান্ড লিস্ট
+    const formatCommands = (cmds) =>
+      cmds.sort().map((cmd) => ` • ${fancy(cmd)}`).join("\n");
 
+    let msg = `╔═━✧ ${fancy("GOATBOT MENU")} ✧━═╗\n`;
+    const sortedCategories = Object.keys(categories).sort();
 
-function downloadImages(callback) {
-    const randomUrl = helpImages[Math.floor(Math.random() * helpImages.length)];
-    const filePath = path.join(__dirname, "cache", "help_random.jpg");
+    for (const cat of sortedCategories) {
+      const emoji = emojiMap[cat] || "📁";
+      msg += `\n╔─ ${emoji} ${fancy(cat.toUpperCase())}\n`;
+      msg += `${formatCommands(categories[cat])}\n╚─━━━━━\n`;
+    }
 
-    request(randomUrl)
-        .pipe(fs.createWriteStream(filePath))
-        .on("close", () => callback([filePath]));
-}
+    msg += `╔═━✧ ɪɴғᴏ ✧━═╗\n`;
+    msg += `Total Commands : ${allCommands.size}\n`;
+    msg += `Prefix         : ${prefix}\n`;
+    msg += `Creator        : ARIYAN\n`;
+    msg += `╚═━✧ END ✧━═╝`;
 
-module.exports.handleEvent = function ({ api, event, getText }) {
-    const { commands } = global.client;
-    const { threadID, messageID, body } = event;
-
-    if (!body || typeof body === "undefined" || body.indexOf("help") != 0) return;  
-    const splitBody = body.slice(body.indexOf("help")).trim().split(/\s+/);  
-    if (splitBody.length < 2 || !commands.has(splitBody[1].toLowerCase())) return;  
-
-    const threadSetting = global.data.threadData.get(parseInt(threadID)) || {};  
-    const command = commands.get(splitBody[1].toLowerCase());  
-    const prefix = threadSetting.PREFIX || global.config.PREFIX;  
-
-    const detail = getText("moduleInfo",  
-        command.config.name,  
-        command.config.usages || "Not Provided",  
-        command.config.description || "Not Provided",  
-        command.config.hasPermssion,  
-        command.config.credits || "Unknown",  
-        command.config.commandCategory || "Unknown",  
-        command.config.cooldowns || 0,  
-        prefix,  
-        global.config.BOTNAME || "𝐒𝐡𝐚𝐡𝐚𝐝𝐚𝐭 𝐂𝐡𝐚𝐭 𝐁𝐨𝐭"  
-    );  
-
-    downloadImages(files => {  
-        const attachments = files.map(f => fs.createReadStream(f));  
-        api.sendMessage({ body: detail, attachment: attachments }, threadID, () => {  
-            files.forEach(f => fs.unlinkSync(f));  
-        }, messageID);  
+    return message.reply({
+      body: msg,
+      attachment: fs.createReadStream(gifPath)
     });
+  }
 };
 
-module.exports.run = function ({ api, event, args, getText }) {
-    const { commands } = global.client;
-    const { threadID, messageID } = event;
-
-    const threadSetting = global.data.threadData.get(parseInt(threadID)) || {};  
-    const prefix = threadSetting.PREFIX || global.config.PREFIX;  
-
-    if (args[0] && commands.has(args[0].toLowerCase())) {  
-        const command = commands.get(args[0].toLowerCase());  
-
-        const detailText = getText("moduleInfo",  
-            command.config.name,  
-            command.config.usages || "Not Provided",  
-            command.config.description || "Not Provided",  
-            command.config.hasPermssion,  
-            command.config.credits || "Unknown",  
-            command.config.commandCategory || "Unknown",  
-            command.config.cooldowns || 0,  
-            prefix,  
-            global.config.BOTNAME || "𝐒𝐡𝐚𝐡𝐚𝐝𝐚𝐭 𝐂𝐡𝐚𝐭 𝐁𝐨𝐭"  
-        );  
-
-        downloadImages(files => {  
-            const attachments = files.map(f => fs.createReadStream(f));  
-            api.sendMessage({ body: detailText, attachment: attachments }, threadID, () => {  
-                files.forEach(f => fs.unlinkSync(f));  
-            }, messageID);  
-        });  
-        return;  
-    }  
-
-    const arrayInfo = Array.from(commands.keys())
-        .filter(cmdName => cmdName && cmdName.trim() !== "")
-        .sort();  
-
-    const page = Math.max(parseInt(args[0]) || 1, 1);  
-    const numberOfOnePage = 20;  
-    const totalPages = Math.ceil(arrayInfo.length / numberOfOnePage);  
-    const start = numberOfOnePage * (page - 1);  
-    const helpView = arrayInfo.slice(start, start + numberOfOnePage);  
-
-    let msg = helpView.map(cmdName => `┃ ✪ ${cmdName}`).join("\n");
-
-    const text = `╭━━━━━━━━━━━━━━━━╮
-┃ 📜 𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐋𝐈𝐒𝐓 📜
-┣━━━━━━━━━━━━━━━┫
-┃ 📄 Page: ${page}/${totalPages}
-┃ 🧮 Total: ${arrayInfo.length}
-┣━━━━━━━━━━━━━━━━┫
-${msg}
-┣━━━━━━━━━━━━━━━━┫
-┃ ⚙ Prefix: ${prefix}
-┃ 🤖 Bot Name: ${global.config.BOTNAME || "𝐒𝐡𝐚𝐡𝐚𝐝𝐚𝐭 𝐂𝐡𝐚𝐭 𝐁𝐨𝐭"}
-┃ 👑 Owner: 𝐒𝐇𝐀𝐇𝐀𝐃𝐀𝐓 𝐒𝐀𝐇𝐔
-╰━━━━━━━━━━━━━━━━╯`;
-
-    downloadImages(files => {  
-        const attachments = files.map(f => fs.createReadStream(f));  
-        api.sendMessage({ body: text, attachment: attachments }, threadID, () => {  
-            files.forEach(f => fs.unlinkSync(f));  
-        }, messageID);  
-    });  
-};
+// GIF ডাউনলোড ফাংশন
+function downloadGif(url, dest) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(dest);
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        fs.unlink(dest, () => {});
+        return reject(new Error(`Failed to download '${url}' (${res.statusCode})`));
+      }
+      res.pipe(file);
+      file.on("finish", () => file.close(resolve));
+    }).on("error", (err) => {
+      fs.unlink(dest, () => {});
+      reject(err);
+    });
+  });
+        }
